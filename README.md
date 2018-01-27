@@ -1,21 +1,7 @@
 # Exfootball
 
-**TODO: Add description**
+This is an example application to show [FakeServer](https://github.com/bernardolins/fake_server) in action.
 
-## Installation
+## Application structure
 
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed
-by adding `exfootball` to your list of dependencies in `mix.exs`:
-
-```elixir
-def deps do
-  [
-    {:exfootball, "~> 0.1.0"}
-  ]
-end
-```
-
-Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
-and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
-be found at [https://hexdocs.pm/exfootball](https://hexdocs.pm/exfootball).
-
+This application uses [Tesla](https://github.com/teamon/tesla) to fetch data from [football-data API](https://www.football-data.org). The HTTP client used to fetch the data can be found at [lib/external](https://github.com/bernardolins/exfootball/tree/master/lib/external) folder. FakeServer was used to test this client. The tests are can be found at [test/external](https://github.com/bernardolins/exfootball/tree/master/test/external) folder.
