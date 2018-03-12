@@ -5,6 +5,8 @@ defmodule Exfootball.External.FootballData do
   plug Tesla.Middleware.Timeout, timeout: Application.get_env(:exfootball, :football_data_api_timeout)
   plug Tesla.Middleware.JSON
 
+  adapter Tesla.Adapter.Hackney
+
   def list_competitions do
     get("/competitions")
     |> handle_errors

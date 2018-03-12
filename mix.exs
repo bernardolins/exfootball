@@ -23,7 +23,8 @@ defmodule Exfootball.Mixfile do
 
   defp deps do
     [
-      {:tesla, "0.10.0"},
+      {:tesla, "~> 0.10.0"},
+      {:hackney, "~> 1.11.0"},
       {:poison, ">= 1.0.0"},
       {:fake_server, "~> 1.4", only: :test},
       {:faker, "~> 0.9", only: :test}
