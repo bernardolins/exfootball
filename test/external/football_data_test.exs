@@ -5,23 +5,16 @@ defmodule Exfootball.External.FootballDataTest do
   alias Exfootball.External.FootballData
   alias FakeServer.HTTP.Response
 
+  @error_base_string "A request to football-data api returned an invalid status:"
+
   describe "#list_competitions" do
     test_with_server "raises if football-data api returns 4XX" do
       Application.put_env(:exfootball, :football_data_api_url, "http://#{FakeServer.address}")
 
-      response_list = [
-        Response.bad_request,
-        Response.unauthorized,
-        Response.forbidden,
-        Response.not_found,
-        Response.method_not_allowed,
-        Response.not_acceptable
-      ]
+      route "/competitions", Response.all_4xx
 
-      route "/competitions", response_list
-
-      Enum.each(1..length(response_list), fn(_) ->
-        assert_raise RuntimeError, fn ->
+      Enum.each(Response.all_4xx, fn(%{code: status_code}) ->
+        assert_raise RuntimeError, "#{@error_base_string} #{status_code}", fn ->
           FootballData.list_competitions
         end
       end)
@@ -30,19 +23,10 @@ defmodule Exfootball.External.FootballDataTest do
     test_with_server "raises if football-data api returns 5XX" do
       Application.put_env(:exfootball, :football_data_api_url, "http://#{FakeServer.address}")
 
-      response_list = [
-        Response.internal_server_error,
-        Response.not_implemented,
-        Response.bad_gateway,
-        Response.service_unavailable,
-        Response.gateway_timeout,
-        Response.http_version_not_supported
-      ]
+      route "/competitions", Response.all_5xx
 
-      route "/competitions", response_list
-
-      Enum.each(1..length(response_list), fn(_) ->
-        assert_raise RuntimeError, fn ->
+      Enum.each(Response.all_5xx, fn(%{code: status_code}) ->
+        assert_raise RuntimeError, "#{@error_base_string} #{status_code}", fn ->
           FootballData.list_competitions
         end
       end)
@@ -51,7 +35,7 @@ defmodule Exfootball.External.FootballDataTest do
     test_with_server "raises Tesla.Error when request timeout" do
       Application.put_env(:exfootball, :football_data_api_url, "http://#{FakeServer.address}")
 
-      route "/competitions", fn(_) -> :timer.sleep(350) end
+      route "/competitions", fn(_) -> :timer.sleep(550) end
 
       assert_raise Tesla.Error, fn -> FootballData.list_competitions end
     end
