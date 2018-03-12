@@ -1,3 +1,3 @@
 use Mix.Config
 
-config :exfootball, football_data_api_timeout: 300
+config :exfootball, football_data_api_timeout: 100
