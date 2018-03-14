@@ -6,6 +6,12 @@ defmodule Exfootball.External.FootballDataTest do
   alias FakeServer.HTTP.Response
 
   @error_base_string "A request to football-data api returned an invalid status:"
+  @cache_key :exfootball_cache
+
+  setup do
+    Cachex.clear(@cache_key)
+    :ok
+  end
 
   describe "#list_competitions" do
     test_with_server "raises if football-data api returns 4XX" do
@@ -76,6 +82,20 @@ defmodule Exfootball.External.FootballDataTest do
         refute is_nil(Map.get(competitions, c[:id]))
         assert c[:caption] == Map.get(competitions, c[:id])
       end)
+    end
+
+    test_with_server "makes the request once and then caches the competitions list" do
+      Application.put_env(:exfootball, :football_data_api_url, "#{FakeServer.http_address}")
+
+      route "/competitions", Exfootball.Support.FootballDataResponses.build(:competitions)
+
+      assert FakeServer.hits == 0
+      competitions = FootballData.list_competitions
+      assert FakeServer.hits == 1
+
+      cached_competitions = FootballData.list_competitions
+      assert cached_competitions == competitions
+      assert FakeServer.hits == 1
     end
   end
 end

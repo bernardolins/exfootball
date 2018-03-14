@@ -7,13 +7,23 @@ defmodule Exfootball.External.FootballData do
 
   adapter Tesla.Adapter.Hackney
 
+  @cache_key :exfootball_cache
+  @cache_ttl :timer.hours(24)
+
   def list_competitions do
-    get("/competitions")
-    |> handle_errors
-    |> Enum.map(fn(competition) ->
-      {competition["id"], competition["caption"]}
-    end)
-    |> Enum.into(%{})
+    cache_bucket = "competitions"
+    case Cachex.get(@cache_key, cache_bucket) do
+      {:ok, nil} ->
+        get("/competitions")
+        |> handle_errors
+        |> Enum.map(fn(competition) ->
+          {competition["id"], competition["caption"]}
+        end)
+        |> Enum.into(%{})
+        |> store_on_cache(cache_bucket)
+      {:ok, competition_list} ->
+        competition_list
+    end
   end
 
   def list_teams(competition_id) do
@@ -37,4 +47,9 @@ defmodule Exfootball.External.FootballData do
 
   defp handle_errors(%Tesla.Env{status: 200, body: body}), do: body
   defp handle_errors(%Tesla.Env{status: status}), do: raise "A request to football-data api returned an invalid status: #{status}"
+
+  defp store_on_cache(value, cache_bucket) do
+    Cachex.set(@cache_key, cache_bucket, value, [ttl: @cache_ttl])
+    value
+  end
 end
