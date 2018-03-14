@@ -29,7 +29,7 @@ defmodule Exfootball.External.FootballData do
   def list_teams(competition_id) do
     get("/competitions/#{competition_id}/teams")
     |> handle_errors
-    |> Map.get("teams")
+    |> Map.get("teams", [])
     |> Enum.map(fn(team) ->
       team["name"]
     end)

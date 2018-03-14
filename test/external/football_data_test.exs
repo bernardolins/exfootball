@@ -7,6 +7,7 @@ defmodule Exfootball.External.FootballDataTest do
 
   @error_base_string "A request to football-data api returned an invalid status:"
   @cache_key :exfootball_cache
+  @competition_id 444
 
   setup do
     Cachex.clear(@cache_key)
@@ -96,6 +97,73 @@ defmodule Exfootball.External.FootballDataTest do
       cached_competitions = FootballData.list_competitions
       assert cached_competitions == competitions
       assert FakeServer.hits == 1
+    end
+  end
+
+  describe "#list_teams" do
+    test_with_server "raises if football-data api returns 4XX" do
+      Application.put_env(:exfootball, :football_data_api_url, "#{FakeServer.http_address}")
+
+      route "/competitions/#{@competition_id}/teams", Response.all_4xx
+
+      Enum.each(Response.all_4xx, fn(%{code: status_code}) ->
+        assert_raise RuntimeError, "#{@error_base_string} #{status_code}", fn ->
+          FootballData.list_teams(@competition_id)
+        end
+      end)
+    end
+
+    test_with_server "raises if football-data api returns 5XX" do
+      Application.put_env(:exfootball, :football_data_api_url, "#{FakeServer.http_address}")
+
+      route "/competitions/#{@competition_id}/teams", Response.all_5xx
+
+      Enum.each(Response.all_5xx, fn(%{code: status_code}) ->
+        assert_raise RuntimeError, "#{@error_base_string} #{status_code}", fn ->
+          FootballData.list_teams(@competition_id)
+        end
+      end)
+    end
+
+    test_with_server "raises Tesla.Error when request timeout" do
+      Application.put_env(:exfootball, :football_data_api_url, "#{FakeServer.http_address}")
+
+      route "/competitions/#{@competition_id}/teams", fn(_) ->
+        timeout = Application.get_env(:exfootball, :football_data_api_timeout) + 20
+        :timer.sleep(timeout)
+      end
+
+      assert_raise Tesla.Error, fn -> FootballData.list_teams(@competition_id) end
+    end
+
+    test_with_server "returns an empty list if competition has no teams" do
+      Application.put_env(:exfootball, :football_data_api_url, "#{FakeServer.http_address}")
+
+      route "/competitions/#{@competition_id}/teams", Exfootball.Support.FootballDataResponses.build(:competition_teams, teams: [])
+
+      assert FootballData.list_teams(@competition_id) == []
+    end
+
+    test_with_server "returns an empty list if football-data-api returns without 'teams' key" do
+      Application.put_env(:exfootball, :football_data_api_url, "#{FakeServer.http_address}")
+
+      route "/competitions/#{@competition_id}/teams", Exfootball.Support.FootballDataResponses.build(:competition_teams, teams: nil)
+
+      assert FootballData.list_teams(@competition_id) == []
+    end
+
+    test_with_server "returns a list containing all teams of a given competition" do
+      Application.put_env(:exfootball, :football_data_api_url, "#{FakeServer.http_address}")
+
+      %{body: %{teams: team_list}} = football_data_teams = Exfootball.Support.FootballDataResponses.build(:competition_teams)
+
+      route "/competitions/#{@competition_id}/teams", football_data_teams
+
+      teams = FootballData.list_teams(@competition_id)
+
+      Enum.each(team_list, fn(team) ->
+        assert Enum.member?(teams, team.name)
+      end)
     end
   end
 end
