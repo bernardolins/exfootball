@@ -9,4 +9,13 @@ defmodule Exfootball.Support.FootballDataResponses do
 
     ok(competition_list, %{"content-type" => "application/json"})
   end
+
+  def competition_teams_response do
+    table_size = :rand.uniform(20)
+    teams = Enum.map(1..table_size, fn(position) ->
+      %{name: "#{Faker.Address.city} FC"}
+    end)
+
+    ok(%{teams: teams}, %{"content-type" => "application/json"})
+  end
 end
