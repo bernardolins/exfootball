@@ -14,7 +14,8 @@ defmodule Exfootball.Mixfile do
 
   def application do
     [
-      extra_applications: [:logger]
+      mod: {Exfootball.Application, []},
+      extra_applications: [:logger, :cachex]
     ]
   end
 
@@ -26,6 +27,7 @@ defmodule Exfootball.Mixfile do
       {:tesla, "~> 0.10.0"},
       {:hackney, "~> 1.11.0"},
       {:poison, ">= 1.0.0"},
+      {:cachex, "~> 3.0"},
       {:fake_server, "~> 1.4", only: :test},
       {:faker, "~> 0.9", only: :test}
     ]
