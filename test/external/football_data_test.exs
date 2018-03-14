@@ -9,7 +9,7 @@ defmodule Exfootball.External.FootballDataTest do
 
   describe "#list_competitions" do
     test_with_server "raises if football-data api returns 4XX" do
-      Application.put_env(:exfootball, :football_data_api_url, "http://#{FakeServer.address}")
+      Application.put_env(:exfootball, :football_data_api_url, "#{FakeServer.http_address}")
 
       route "/competitions", Response.all_4xx
 
@@ -21,7 +21,7 @@ defmodule Exfootball.External.FootballDataTest do
     end
 
     test_with_server "raises if football-data api returns 5XX" do
-      Application.put_env(:exfootball, :football_data_api_url, "http://#{FakeServer.address}")
+      Application.put_env(:exfootball, :football_data_api_url, "#{FakeServer.http_address}")
 
       route "/competitions", Response.all_5xx
 
@@ -33,40 +33,46 @@ defmodule Exfootball.External.FootballDataTest do
     end
 
     test_with_server "raises Tesla.Error when request timeout" do
-      Application.put_env(:exfootball, :football_data_api_url, "http://#{FakeServer.address}")
+      Application.put_env(:exfootball, :football_data_api_url, "#{FakeServer.http_address}")
 
-      route "/competitions", fn(_) -> :timer.sleep(550) end
+      route "/competitions", fn(_) ->
+        timeout = Application.get_env(:exfootball, :football_data_api_timeout) + 20
+        :timer.sleep(timeout)
+      end
 
       assert_raise Tesla.Error, fn -> FootballData.list_competitions end
     end
 
+    test_with_server "returns an empty list if there are no competitions available" do
+      Application.put_env(:exfootball, :football_data_api_url, "#{FakeServer.http_address}")
+
+      route "/competitions", Response.ok([], %{"content-type" => "application/json"})
+
+      assert FootballData.list_competitions == %{}
+    end
+
     test_with_server "returns a list of tuples with the same size of the list of competitions replied by football-data api" do
-      Application.put_env(:exfootball, :football_data_api_url, "http://#{FakeServer.address}")
+      Application.put_env(:exfootball, :football_data_api_url, "#{FakeServer.http_address}")
 
-      route "/competitions" do
-        Response.ok(
-          [%{id: 444, caption: "Campeonato Brasileiro da Série A"},
-           %{id: 445, caption: "Premier League 2017/18"},
-           %{id: 446, caption: "Championship 2017/18"}],
-          %{"content-type" => "application/json"}
-        )
-      end
+      competition_list = [%{id: 444, caption: "Campeonato Brasileiro da Série A"}, %{id: 445, caption: "Premier League 2017/18"}, %{id: 446, caption: "Championship 2017/18"}]
 
-      competition_list = Enum.to_list(FootballData.list_competitions)
+      route "/competitions", Response.ok(competition_list, %{"content-type" => "application/json"})
 
-      assert length(competition_list) == 3
+      competition_response = Enum.to_list(FootballData.list_competitions)
+
+      assert length(competition_response) == 3
     end
 
     test_with_server "returns a list with the names and ids of all competitions replied by football-data api" do
-      Application.put_env(:exfootball, :football_data_api_url, "http://#{FakeServer.address}")
+      Application.put_env(:exfootball, :football_data_api_url, "#{FakeServer.http_address}")
 
-      competitions_response = Exfootball.Support.FootballDataResponses.build(:competitions)
+      football_data_response = Exfootball.Support.FootballDataResponses.build(:competitions)
 
-      route "/competitions", competitions_response
+      route "/competitions", football_data_response
 
       competitions = FootballData.list_competitions
 
-      Enum.each(competitions_response.body, fn(c) ->
+      Enum.each(football_data_response.body, fn(c) ->
         refute is_nil(Map.get(competitions, c[:id]))
         assert c[:caption] == Map.get(competitions, c[:id])
       end)
